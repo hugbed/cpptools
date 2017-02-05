@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-namespace math {
+namespace hb {
 
 template<typename T>
 T clamp(const T& v, const T& lo, const T& hi)

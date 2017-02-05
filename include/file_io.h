@@ -9,8 +9,9 @@
 #include <fstream>
 #include <vector>
 
-namespace fileio {
-using byte_t = unsigned char;
+#include "types.h"
+
+namespace hb {
 
 template<class Size_t>
 static void push_back_n_bytes(std::ifstream& stream, Size_t n, std::vector<byte_t>& v)
@@ -74,6 +75,7 @@ private:
     size_t chunkSize_;
     std::ifstream stream_;
 };
-}
+
+} // namespace hb
 
 #endif //FILEREAD_FILEIO_H

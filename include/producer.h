@@ -5,7 +5,7 @@
 #ifndef FILEREAD_PRODUCER_H
 #define FILEREAD_PRODUCER_H
 
-#include "Queue.h"
+#include "queue.h"
 
 template<class T>
 class Producer {

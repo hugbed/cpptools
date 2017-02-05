@@ -10,15 +10,14 @@
 #include <fstream>
 #include <thread>
 #include <assert.h>
-#include "Queue.h"
-#include "fileio.h"
-#include "utils.h"
-#include "Producer.h"
-#include "ImageConversion.h"
 
-using utils::probe;
-using utils::println;
-using byte = fileio::byte_t;
+#include "queue.h"
+#include "file_io.h"
+#include "utils.h"
+#include "producer.h"
+#include "image_conversion.h"
+
+using namespace hb;
 
 void testProducerMoveConstruction()
 {
@@ -36,12 +35,12 @@ void testProducerMoveConstruction()
 
 void testFileReading()
 {
-    Producer<std::vector<byte>> producer;
+    Producer<std::vector<byte_t>> producer;
 
     auto t = std::thread([&producer]() {
-      fileio::ifchunkstream cs{"/Users/hugbed/ClionProjects/FileRead/data.bin", 128};
+      ifchunkstream cs{"/Users/hugbed/ClionProjects/FileRead/data.bin", 128};
 
-      std::vector<byte> in_bytes;
+      std::vector<byte_t> in_bytes;
       cs >> in_bytes;
       producer.produce(std::move(in_bytes));
 
@@ -52,7 +51,7 @@ void testFileReading()
     t.join();
 
     // consume
-    std::vector<byte> out_bytes;
+    std::vector<byte_t> out_bytes;
     out_bytes = producer.consume();
     println(out_bytes);
 
@@ -62,16 +61,20 @@ void testFileReading()
 
 void testYUV8_422_to_RGB888()
 {
-
-    using namespace ImageConversion;
-
-    std::vector<byte> image = fileio::load_bytes("/Users/hugbed/ClionProjects/FileRead/image.yuv");
+    std::vector<byte_t> image = load_bytes("/Users/hugbed/ClionProjects/FileRead/images/image.yuv");
     assert(image.size()>0);
+
+    using namespace image_format;
 
     image = color_cast<YUV8_422, RGB888>(image);
     assert(image.size()>0);
 
-    fileio::write_bytes("/Users/hugbed/ClionProjects/FileRead/image.raw", image);
+    write_bytes("/Users/hugbed/ClionProjects/FileRead/images/image.raw", image);
+}
+
+int main() {
+    testYUV8_422_to_RGB888();
+    return 0;
 }
 
 #endif //FILEREAD_TESTS_H

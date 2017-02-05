@@ -7,19 +7,18 @@
 
 #include <vector>
 #include "math.h"
+#include "types.h"
 
-namespace ImageConversion {
+namespace hb {
 
-struct YUV8_422 { };
-struct RGB888 { };
-
-using byte_t = unsigned char; // maybe should use fileio::byte_t?
+namespace image_format {
+    struct YUV8_422 { };
+    struct RGB888 { };
+}
 
 template<class YUV8_422, class RGB888>
 std::tuple<byte_t, byte_t, byte_t> color_cast(byte_t Y, byte_t U, byte_t V)
 {
-    using math::clamp;
-
     int C = Y-16;
     int D = U-128;
     int E = V-128;
@@ -68,6 +67,7 @@ static std::vector<byte_t> color_cast(const std::vector<byte_t>& in)
 
     return imageRGBA;
 }
-}
+
+} // namespace hb
 
 #endif //FILEREAD_IMAGECONVERSION_H

@@ -7,7 +7,8 @@
 
 #include <iostream>
 
-namespace utils {
+namespace hb {
+
 struct probe {
   probe() { std::cout << "probe() " << ((void*) this) << std::endl; }
   probe(const probe&) { std::cout << "probe(c&) " << ((void*) this) << std::endl; }
@@ -33,6 +34,7 @@ void println(Container c)
     }
     std::cout << std::endl;
 }
-}
+
+} // namespace hb
 
 #endif //FILEREAD_UTILS_H
