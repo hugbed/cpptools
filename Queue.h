@@ -11,14 +11,13 @@
 #include <mutex>
 #include <condition_variable>
 
-template <class T>
+template<class T>
 class Queue {
 public:
     T pop()
     {
         std::unique_lock<std::mutex> mlock(mutex_);
-        while (queue_.empty())
-        {
+        while (queue_.empty()) {
             cond_.wait(mlock);
         }
         auto val = std::move(queue_.front());
@@ -30,7 +29,7 @@ public:
     {
         std::unique_lock<std::mutex> mlock(mutex_);
         cond_.wait(mlock, [this]() {
-            return queue_.empty();
+          return queue_.empty();
         });
         item = queue_.front();
         queue_.pop();
@@ -44,7 +43,8 @@ public:
         cond_.notify_one();
     }
 
-    void push(T&& item) {
+    void push(T&& item)
+    {
         std::unique_lock<std::mutex> mlock(mutex_);
         queue_.push(std::forward<T>(item));
         mlock.unlock();
@@ -60,6 +60,5 @@ private:
     std::mutex mutex_;
     std::condition_variable cond_;
 };
-
 
 #endif //FILEREAD_QUEUE_H
