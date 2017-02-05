@@ -5,6 +5,7 @@
 #ifndef FILEREAD_TESTS_H
 #define FILEREAD_TESTS_H
 
+
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -17,9 +18,11 @@
 #include "producer.h"
 #include "image_conversion.h"
 
+#include "gtest/gtest.h"
+
 using namespace hb;
 
-void testProducerMoveConstruction()
+TEST(producer, move_construction)
 {
     Producer<probe> producer;
 
@@ -31,14 +34,16 @@ void testProducerMoveConstruction()
 
     // consume
     auto return_probe = producer.consume();
+
+    EXPECT_EQ(0, 0);
 }
 
-void testFileReading()
+TEST(producer, file_reading)
 {
     Producer<std::vector<byte_t>> producer;
 
     auto t = std::thread([&producer]() {
-      ifchunkstream cs{"/Users/hugbed/ClionProjects/FileRead/data.bin", 128};
+      ifchunkstream cs{"/Users/hugbed/ClionProjects/cpptools/tests/data/data.bin", 128};
 
       std::vector<byte_t> in_bytes;
       cs >> in_bytes;
@@ -57,24 +62,23 @@ void testFileReading()
 
     out_bytes = producer.consume();
     println(out_bytes);
+
+    EXPECT_EQ(0, 0);
 }
 
-void testYUV8_422_to_RGB888()
+TEST(image_conversion, YUV8_422_to_RGB888)
 {
-    std::vector<byte_t> image = load_bytes("/Users/hugbed/ClionProjects/FileRead/images/image.yuv");
-    assert(image.size()>0);
+    std::vector<byte_t> image = load_bytes("/Users/hugbed/ClionProjects/cpptools/tests/data/image.yuv");
+
+    EXPECT_GT(image.size(), 0);
 
     using namespace image_format;
 
     image = color_cast<YUV8_422, RGB888>(image);
-    assert(image.size()>0);
+    EXPECT_GT(image.size(), 0);
 
-    write_bytes("/Users/hugbed/ClionProjects/FileRead/images/image.raw", image);
+    write_bytes("/Users/hugbed/ClionProjects/cpptools/tests/data/image.raw", image);
 }
 
-int main() {
-    testYUV8_422_to_RGB888();
-    return 0;
-}
 
 #endif //FILEREAD_TESTS_H
