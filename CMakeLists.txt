@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
+project(cpptools_project)
 
 # LIBRARY
 add_subdirectory(cpptools)

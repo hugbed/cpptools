@@ -23,24 +23,62 @@
 
 using namespace hb;
 
+TEST(probe_count, count_is_correct)
+{
+    probe_count::resetCount();
+    probe_count a{};
+    const probe_count b{a};
+    probe_count c{b};
+    probe_count d{std::move(a)};
+
+    EXPECT_EQ(probe_count::baseConstructionCount, 1);
+    EXPECT_EQ(probe_count::copyConstructionCount, 1);
+    EXPECT_EQ(probe_count::crefConstructionCount, 1);
+    EXPECT_EQ(probe_count::moveConstructionCount, 1);
+}
+
 TEST(producer, move_construction)
 {
-    // TODO: generalize probe to use functor instead of std::cout <<
-    Producer<probe> producer;
+    probe_count::resetCount();
+    Producer<probe_count> producer;
 
     auto t = std::thread([&producer]() {
-      probe in_bytes;
-      producer.produce(std::move(in_bytes));
+      probe_count in_probe;
+      producer.produce(std::move(in_probe));
     });
     t.join();
 
     // consume
-    auto return_probe = producer.consume();
+    auto out_probe = producer.consume();
 
-    EXPECT_EQ(0, 0);
+    EXPECT_EQ(probe_count::baseConstructionCount, 1);
+    EXPECT_EQ(probe_count::copyConstructionCount, 0);
+    EXPECT_EQ(probe_count::crefConstructionCount, 0);
+    EXPECT_EQ(probe_count::moveConstructionCount, 2);
 }
 
-TEST(producer, file_reading)
+TEST(producer, copy_construction)
+{
+    probe_count::resetCount();
+    Producer<probe_count> producer;
+
+    auto t = std::thread([&producer]() {
+      probe_count in_probe;
+      producer.produce(in_probe);
+    });
+    t.join();
+
+    // consume
+    auto out_probe = producer.consume();
+
+    EXPECT_EQ(probe_count::baseConstructionCount, 1);
+    EXPECT_EQ(probe_count::copyConstructionCount, 0);
+    EXPECT_EQ(probe_count::crefConstructionCount, 1);
+    EXPECT_EQ(probe_count::moveConstructionCount, 1);
+}
+
+
+TEST(ifchunkstream, file_reading)
 {
     //TODO: mock file reading?
     Producer<std::vector<byte_t>> producer;
