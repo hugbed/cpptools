@@ -5,6 +5,7 @@ DEPENDENCIES_DIR=$PWD
 
 # params: github_url, repo_name
 function install {
+    echo helli
     git clone $1 $2 && \
         cd $2 && \
         mkdir build && \
@@ -12,7 +13,7 @@ function install {
         cmake .. && \
         make .. && \
         make install
-    cd DEPENDENCIES_DIR 
+    cd $DEPENDENCIES_DIR 
 }
 
 install https://github.com/google/googletest.git googletest

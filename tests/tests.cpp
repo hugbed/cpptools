@@ -10,8 +10,6 @@
 #include <vector>
 #include <fstream>
 #include <thread>
-#include <assert.h>
-#include <chrono>
 
 #include "queue.h"
 #include "file_io.h"
@@ -83,35 +81,23 @@ TEST(producer, cref_construction)
     EXPECT_EQ(probe::moveConstructionCount, 1);
 }
 
-TEST(ifchunkstream, file_reading)
+// last byte should not be repeated, e.g., ABBC instead of ABCD
+TEST(ifchunkstream, file_reading_multiple_chunks)
 {
     std::cout << std::endl;
 
-    std::vector<char> gold_first, gold_second;
-    gold_first.resize(128); gold_second.resize(128);
-    std::fill(std::begin(gold_first), std::end(gold_first), 'A');
-    std::fill(std::begin(gold_second), std::end(gold_second), 'B');
+    std::vector<byte_t> gold{'A', 'B', 'C', 'D'};
 
-    ifchunkstream cs{"data/data.bin", 128};
-    std::vector<byte_t> file_bytes;
-    cs >> file_bytes;
-    println(gold_first);
-    println(file_bytes);
-    EXPECT_EQ(file_bytes.size(), 128);
+    std::vector<byte_t> b;
+    ifchunkstream cs{"data/data.bin", 2};
+    b.clear();
+    cs >> b;
+    cs >> b;
+    println(b);
     EXPECT_EQ(true,
-            std::equal(std::begin(gold_first),
-                    std::end(gold_first),
-                    std::begin(file_bytes)));
-
-    file_bytes.clear();
-    cs >> file_bytes;
-    println(gold_second);
-    println(file_bytes);
-    EXPECT_EQ(file_bytes.size(), 128);
-    EXPECT_EQ(true,
-            std::equal(std::begin(gold_second),
-                    std::end(gold_second),
-                    std::begin(file_bytes)));
+            std::equal(std::begin(gold),
+                    std::end(gold),
+                    std::begin(b)));
 }
 
 void dummy_function()
@@ -131,18 +117,41 @@ TEST(mesure_time_wrapper, returns_time)
     EXPECT_GT(dt_ns.count(), 0);
 }
 
-TEST(image_conversion, YUV8_422_to_RGB888)
+// TODO: Put more thoughts into these two tests
+TEST(image_conversion, YUV8_422_to_RGB888_All_0)
 {
-    //TODO: do with dummy pixels (e.g., only R, only G, only B)
-    std::vector<byte_t> image = load_bytes("/Users/hugbed/ClionProjects/cpptools/tests/data/image.yuv");
-    EXPECT_GT(image.size(), 0);
-
     using namespace image_format;
-    image = color_cast<YUV8_422, RGB888>(image);
-    EXPECT_GT(image.size(), 0);
 
-    write_bytes("/Users/hugbed/ClionProjects/cpptools/tests/data/image.raw", image);
+    std::vector<byte_t> gold = {
+            0, 135, 0, 255,
+            0, 135, 0, 255
+        };
+
+    std::vector<byte_t> imageYUV = {0, 0, 0, 0}; // two black pixels
+    auto resRGB = color_cast<YUV8_422, RGB888>(imageYUV, Dimensions{2, 1});
+
+    EXPECT_EQ(true,
+              std::equal(std::begin(gold),
+                         std::end(gold),
+                         std::begin(resRGB)));
 }
 
+TEST(image_conversion, YUV8_422_to_RGB888_All_255)
+{
+    using namespace image_format;
+
+    std::vector<byte_t> gold = {
+            255, 125, 255, 255,
+            255, 125, 255, 255
+        };
+
+    std::vector<byte_t> imageYUV = {255, 255, 255, 255}; // two black pixels
+    auto resRGB = color_cast<YUV8_422, RGB888>(imageYUV, Dimensions{2, 1});
+
+    EXPECT_EQ(true,
+              std::equal(std::begin(gold),
+                         std::end(gold),
+                         std::begin(resRGB)));
+}
 
 #endif //FILEREAD_TESTS_H

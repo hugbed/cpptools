@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <fstream>
 #include <vector>
+#include <algorithm>
 
 #include "types.h"
 
@@ -19,6 +20,7 @@ static void push_back_n_bytes(std::istream& stream, Size_t n, std::vector<byte_t
     std::copy_n(std::istreambuf_iterator<char>{stream},
             n,
             back_inserter(v));
+    stream.get(); // to prevent reading twice the last character
 }
 
 std::vector<byte_t> load_bytes(const std::string& filename)

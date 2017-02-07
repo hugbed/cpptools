@@ -125,11 +125,11 @@ struct probe<probe_policy::count> : probe<probe<probe_policy::count>> {
 };
 
 
-template<class Container>
-void println(Container c)
+template<class Container, class ValueType = typename Container::value_type>
+void println(Container c, const std::string& delimiter = std::string(""))
 {
-    for (auto val: c) {
-        std::cout << val;
+    for (ValueType val: c) {
+        std::cout << val << delimiter;
     }
     std::cout << std::endl;
 }
