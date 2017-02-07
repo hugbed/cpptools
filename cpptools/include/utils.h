@@ -7,61 +7,75 @@
 
 #include <iostream>
 #include <chrono>
+#include <map>
 
 namespace hb {
 
+namespace probe_policy {
+    struct cout { };
+    struct count{ };
+}
+
+template <typename T>
 struct probe {
   enum class FunctionCalled {
       BASE_CONSTRUCTION,
-      COPY_CONSTRUCTION,
+      REF_CONSTRUCTION,
       CREF_CONSTRUCTION,
       MOVE_CONSTRUCTION,
       DESTRUCTION,
       COPY_ASSIGNATION,
+      REF_ASSIGNATION,
       CREF_ASSIGNATION,
       MOVE_ASSIGNATION
   };
 
-  probe() = delete;
-  probe(const probe&) = delete;
-  probe(probe&&) = delete;
+  probe() { handler(FunctionCalled::BASE_CONSTRUCTION); }
+  probe(probe&) { handler(FunctionCalled::REF_CONSTRUCTION); }
+  probe(const probe&) { handler(FunctionCalled::CREF_CONSTRUCTION); }
+  probe(probe&&) { handler(FunctionCalled::MOVE_CONSTRUCTION); }
+  ~probe() { handler(FunctionCalled::DESTRUCTION); }
+  probe& operator=(probe) { handler(FunctionCalled::COPY_ASSIGNATION); return *this; }
+  probe& operator=(probe&) { handler(FunctionCalled::REF_ASSIGNATION); return *this; }
+  probe& operator=(const probe&) { handler(FunctionCalled::CREF_ASSIGNATION); return *this; }
+  probe& operator=(probe&&) { handler(FunctionCalled::MOVE_ASSIGNATION); return *this; }
+
+  void handler(FunctionCalled f)
+  {
+      static_cast<T*>(this)->specificHandler(f);
+  }
 };
 
-struct probe_cout {
-  probe_cout() { handler(probe::FunctionCalled::BASE_CONSTRUCTION); }
-  probe_cout(probe_cout&) { handler(probe::FunctionCalled::COPY_CONSTRUCTION); }
-  probe_cout(const probe_cout&) { handler(probe::FunctionCalled::CREF_CONSTRUCTION); }
-  probe_cout(probe_cout&&) { handler(probe::FunctionCalled::MOVE_CONSTRUCTION); }
-  ~probe_cout() { handler(probe::FunctionCalled::DESTRUCTION); }
-  probe_cout& operator=(probe_cout) { handler(probe::FunctionCalled::COPY_ASSIGNATION); return *this; }
-  probe_cout& operator=(const probe_cout&) { handler(probe::FunctionCalled::CREF_ASSIGNATION); return *this; }
-  probe_cout& operator=(probe_cout&&) { handler(probe::FunctionCalled::MOVE_ASSIGNATION); return *this; }
-
-  void handler(probe::FunctionCalled functionCalled)
+template<>
+struct probe<probe_policy::cout> : probe<probe<probe_policy::cout>> {
+private:
+  void specificHandler(FunctionCalled functionCalled)
   {
       switch (functionCalled) {
-      case probe::FunctionCalled::BASE_CONSTRUCTION:
+      case FunctionCalled::BASE_CONSTRUCTION:
           printFunctionCalled("probe()");
           break;
-      case probe::FunctionCalled::COPY_CONSTRUCTION:
-          printFunctionCalled("probe(probe)");
+      case FunctionCalled::REF_CONSTRUCTION:
+          printFunctionCalled("probe(&)");
           break;
-      case probe::FunctionCalled::CREF_CONSTRUCTION:
+      case FunctionCalled::CREF_CONSTRUCTION:
           printFunctionCalled("probe(c&)");
           break;
-      case probe::FunctionCalled::MOVE_CONSTRUCTION:
+      case FunctionCalled::MOVE_CONSTRUCTION:
           printFunctionCalled("probe(&&)");
           break;
-      case probe::FunctionCalled::DESTRUCTION:
+      case FunctionCalled::DESTRUCTION:
           printFunctionCalled("~probe()");
           break;
-      case probe::FunctionCalled::COPY_ASSIGNATION:
+      case FunctionCalled::COPY_ASSIGNATION:
           printFunctionCalled("probe=()");
+      case FunctionCalled::REF_ASSIGNATION:
+          printFunctionCalled("probe=(&)");
           break;
-      case probe::FunctionCalled::CREF_ASSIGNATION:
+      case FunctionCalled::CREF_ASSIGNATION:
           printFunctionCalled("probe=(c&)");
           break;
-      case probe::FunctionCalled::MOVE_ASSIGNATION:
+      case FunctionCalled::MOVE_ASSIGNATION:
           printFunctionCalled("probe=(&&)");
           break;
       }
@@ -73,25 +87,21 @@ struct probe_cout {
   }
 };
 
-struct probe_count {
-  probe_count() { handler(probe::FunctionCalled::BASE_CONSTRUCTION); }
-  probe_count(probe_count&) { handler(probe::FunctionCalled::COPY_CONSTRUCTION); }
-  probe_count(const probe_count&) { handler(probe::FunctionCalled::CREF_CONSTRUCTION); }
-  probe_count(probe_count&&) { handler(probe::FunctionCalled::MOVE_CONSTRUCTION); }
-
-  void handler(probe::FunctionCalled f)
+template <>
+struct probe<probe_policy::count> : probe<probe<probe_policy::count>> {
+  void specificHandler(FunctionCalled f)
   {
       switch (f) {
-      case probe::FunctionCalled::BASE_CONSTRUCTION:
+      case FunctionCalled::BASE_CONSTRUCTION:
           baseConstructionCount++;
           break;
-      case probe::FunctionCalled::COPY_CONSTRUCTION:
+      case FunctionCalled::REF_CONSTRUCTION:
           copyConstructionCount++;
           break;
-      case probe::FunctionCalled::CREF_CONSTRUCTION:
+      case FunctionCalled::CREF_CONSTRUCTION:
           crefConstructionCount++;
           break;
-      case probe::FunctionCalled::MOVE_CONSTRUCTION:
+      case FunctionCalled::MOVE_CONSTRUCTION:
           moveConstructionCount++;
           break;
       default:
@@ -102,10 +112,10 @@ struct probe_count {
 
   static void resetCount()
   {
-      probe_count::baseConstructionCount = 0;
-      probe_count::copyConstructionCount = 0;
-      probe_count::crefConstructionCount = 0;
-      probe_count::moveConstructionCount = 0;
+      probe<probe_policy::count>::baseConstructionCount = 0;
+      probe<probe_policy::count>::copyConstructionCount = 0;
+      probe<probe_policy::count>::crefConstructionCount = 0;
+      probe<probe_policy::count>::moveConstructionCount = 0;
   }
 
   static size_t baseConstructionCount;

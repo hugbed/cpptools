@@ -14,7 +14,7 @@
 namespace hb {
 
 template<class Size_t>
-static void push_back_n_bytes(std::ifstream& stream, Size_t n, std::vector<byte_t>& v)
+static void push_back_n_bytes(std::istream& stream, Size_t n, std::vector<byte_t>& v)
 {
     std::copy_n(std::istreambuf_iterator<char>{stream},
             n,

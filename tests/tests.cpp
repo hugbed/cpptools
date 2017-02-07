@@ -25,25 +25,29 @@ using namespace hb;
 
 TEST(probe_count, count_is_correct)
 {
-    probe_count::resetCount();
-    probe_count a{};
-    const probe_count b{a};
-    probe_count c{b};
-    probe_count d{std::move(a)};
+    using probe = probe<probe_policy::count>;
 
-    EXPECT_EQ(probe_count::baseConstructionCount, 1);
-    EXPECT_EQ(probe_count::copyConstructionCount, 1);
-    EXPECT_EQ(probe_count::crefConstructionCount, 1);
-    EXPECT_EQ(probe_count::moveConstructionCount, 1);
+    probe::resetCount();
+    probe a{};
+    const probe b{a};
+    probe c{b};
+    probe d{std::move(a)};
+
+    EXPECT_EQ(probe::baseConstructionCount, 1);
+    EXPECT_EQ(probe::copyConstructionCount, 0);
+    EXPECT_EQ(probe::crefConstructionCount, 2);
+    EXPECT_EQ(probe::moveConstructionCount, 1);
 }
 
 TEST(producer, move_construction)
 {
-    probe_count::resetCount();
-    Producer<probe_count> producer;
+    using probe = probe<probe_policy::count>;
+
+    probe::resetCount();
+    Producer<probe> producer;
 
     auto t = std::thread([&producer]() {
-      probe_count in_probe;
+      probe in_probe;
       producer.produce(std::move(in_probe));
     });
     t.join();
@@ -51,19 +55,21 @@ TEST(producer, move_construction)
     // consume
     auto out_probe = producer.consume();
 
-    EXPECT_EQ(probe_count::baseConstructionCount, 1);
-    EXPECT_EQ(probe_count::copyConstructionCount, 0);
-    EXPECT_EQ(probe_count::crefConstructionCount, 0);
-    EXPECT_EQ(probe_count::moveConstructionCount, 2);
+    EXPECT_EQ(probe::baseConstructionCount, 1);
+    EXPECT_EQ(probe::copyConstructionCount, 0);
+    EXPECT_EQ(probe::crefConstructionCount, 0);
+    EXPECT_EQ(probe::moveConstructionCount, 2);
 }
 
-TEST(producer, copy_construction)
+TEST(producer, cref_construction)
 {
-    probe_count::resetCount();
-    Producer<probe_count> producer;
+    using probe = probe<probe_policy::count>;
+
+    probe::resetCount();
+    Producer<probe> producer;
 
     auto t = std::thread([&producer]() {
-      probe_count in_probe;
+      probe in_probe;
       producer.produce(in_probe);
     });
     t.join();
@@ -71,40 +77,41 @@ TEST(producer, copy_construction)
     // consume
     auto out_probe = producer.consume();
 
-    EXPECT_EQ(probe_count::baseConstructionCount, 1);
-    EXPECT_EQ(probe_count::copyConstructionCount, 0);
-    EXPECT_EQ(probe_count::crefConstructionCount, 1);
-    EXPECT_EQ(probe_count::moveConstructionCount, 1);
+    EXPECT_EQ(probe::baseConstructionCount, 1);
+    EXPECT_EQ(probe::copyConstructionCount, 0);
+    EXPECT_EQ(probe::crefConstructionCount, 1);
+    EXPECT_EQ(probe::moveConstructionCount, 1);
 }
-
 
 TEST(ifchunkstream, file_reading)
 {
-    //TODO: mock file reading?
-    Producer<std::vector<byte_t>> producer;
+    std::cout << std::endl;
 
-    auto t = std::thread([&producer]() {
-      ifchunkstream cs{"/Users/hugbed/ClionProjects/cpptools/tests/data/data.bin", 128};
+    std::vector<char> gold_first, gold_second;
+    gold_first.resize(128); gold_second.resize(128);
+    std::fill(std::begin(gold_first), std::end(gold_first), 'A');
+    std::fill(std::begin(gold_second), std::end(gold_second), 'B');
 
-      std::vector<byte_t> in_bytes;
-      cs >> in_bytes;
-      producer.produce(std::move(in_bytes));
+    ifchunkstream cs{"data/data.bin", 128};
+    std::vector<byte_t> file_bytes;
+    cs >> file_bytes;
+    println(gold_first);
+    println(file_bytes);
+    EXPECT_EQ(file_bytes.size(), 128);
+    EXPECT_EQ(true,
+            std::equal(std::begin(gold_first),
+                    std::end(gold_first),
+                    std::begin(file_bytes)));
 
-      in_bytes.clear();
-      cs >> in_bytes;
-      producer.produce(std::move(in_bytes));
-    });
-    t.join();
-
-    // consume
-    std::vector<byte_t> out_bytes;
-    out_bytes = producer.consume();
-    println(out_bytes);
-
-    out_bytes = producer.consume();
-    println(out_bytes);
-
-    EXPECT_EQ(0, 0);
+    file_bytes.clear();
+    cs >> file_bytes;
+    println(gold_second);
+    println(file_bytes);
+    EXPECT_EQ(file_bytes.size(), 128);
+    EXPECT_EQ(true,
+            std::equal(std::begin(gold_second),
+                    std::end(gold_second),
+                    std::begin(file_bytes)));
 }
 
 void dummy_function()
