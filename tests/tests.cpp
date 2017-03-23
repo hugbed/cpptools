@@ -10,6 +10,8 @@
 #include <vector>
 #include <fstream>
 #include <thread>
+#include <sync_producer.h>
+#include <sync_consumer.h>
 
 #include "queue.h"
 #include "file_io.h"
@@ -79,6 +81,84 @@ TEST(producer, cref_construction)
     EXPECT_EQ(probe::copyConstructionCount, 0);
     EXPECT_EQ(probe::crefConstructionCount, 1);
     EXPECT_EQ(probe::moveConstructionCount, 1);
+}
+
+class IntIncrementProducer : public SyncProducer<int> {
+public:
+    IntIncrementProducer(std::mutex &doneProducingMutex, std::condition_variable &shouldConsumeCV)
+        : SyncProducer(doneProducingMutex, shouldConsumeCV)
+        , product{}
+    {}
+private:
+    virtual void produce() override
+    {
+        product++;
+    }
+
+    virtual const int& getProduct()
+    {
+        return product;
+    }
+
+    virtual bool shouldStopProducing() override
+    {
+        return product == 10;
+    }
+
+    int product;
+};
+
+class IntCoutConsumer : public SyncConsumer<int> {
+public:
+    IntCoutConsumer(std::mutex &doneProducingMutex,
+                    std::condition_variable &shouldConsumeCV,
+                    const std::vector<SyncProducer<int>*> producers)
+        : SyncConsumer(doneProducingMutex, shouldConsumeCV, producers)
+    {
+    }
+private:
+    virtual void consume() override
+    {
+        for (auto & producer : producers) {
+            EXPECT_EQ(producer->getProduct(), consumerProductCheck);
+        }
+        consumerProductCheck++;
+        std::cout << std::endl;
+    }
+
+    virtual bool shouldStopConsuming() override
+    {
+        return producers[0]->getProduct() == 10;
+    }
+
+    int consumerProductCheck{1};
+};
+
+TEST(sync_producer, producer_consumer_works)
+{
+    std::mutex doneProducingMutex;
+    std::condition_variable shouldConsumeCV;
+
+    std::unique_ptr<SyncProducer<int>> p1(std::make_unique<IntIncrementProducer>(doneProducingMutex, shouldConsumeCV));
+    std::unique_ptr<SyncProducer<int>> p2(std::make_unique<IntIncrementProducer>(doneProducingMutex, shouldConsumeCV));
+
+    std::vector<SyncProducer<int>*> producers = {
+        p1.get(),
+        p2.get()
+    };
+
+    auto p1_thread = std::thread([&p1]{
+        p1->startProducing();
+    });
+    auto p2_thread = std::thread([&p2]{
+        p2->startProducing();
+    });
+
+    IntCoutConsumer c(doneProducingMutex, shouldConsumeCV, producers);
+    c.startConsuming();
+
+    p1_thread.join();
+    p2_thread.join();
 }
 
 // last byte should not be repeated, e.g., ABBC instead of ABCD
